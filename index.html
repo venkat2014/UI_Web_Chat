@@ -1,61 +1,241 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartBot</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My First AI Agent</title>
 
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-  <script src="https://code.jquery.com/jquery-3.5.1.min.js"
-          integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0="
-          crossorigin="anonymous"></script>
+<!-- Font -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #0f172a;
+  --card: rgba(255,255,255,0.08);
+  --border: rgba(255,255,255,0.15);
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: radial-gradient(circle at top, #1e293b, #020617);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+}
+
+.app {
+  max-width: 420px;
+  width: 100%;
+  margin: auto;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(14px);
+}
+
+/* Header */
+.top-bar {
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-title {
+  font-weight: 600;
+}
+
+.model-select {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px;
+}
+
+/* Chat */
+.chat-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-message {
+  display: flex;
+}
+
+.chat-message.ai { justify-content: flex-start; }
+.chat-message.user { justify-content: flex-end; }
+
+.bubble {
+  max-width: 80%;
+  padding: 12px 14px;
+  border-radius: 16px;
+  line-height: 1.4;
+}
+
+.ai .bubble {
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
+.user .bubble {
+  background: linear-gradient(135deg, #38bdf8, #6366f1);
+  color: #020617;
+}
+
+/* Input */
+.input-bar {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid var(--border);
+}
+
+textarea {
+  flex: 1;
+  resize: none;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 10px;
+  font-family: inherit;
+  outline: none;
+}
+
+.icon-btn {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.icon-btn.primary {
+  background: var(--accent);
+  color: #020617;
+  border: none;
+}
+
+/* Typing dots */
+.typing {
+  display: inline-flex;
+  gap: 4px;
+}
+.typing span {
+  width: 6px;
+  height: 6px;
+  background: var(--muted);
+  border-radius: 50%;
+  animation: blink 1.4s infinite both;
+}
+.typing span:nth-child(2) { animation-delay: .2s; }
+.typing span:nth-child(3) { animation-delay: .4s; }
+
+@keyframes blink {
+  0% { opacity: .2; }
+  20% { opacity: 1; }
+  100% { opacity: .2; }
+}
+</style>
 </head>
 
 <body>
+<div class="app">
 
-  <!-- MAIN CONTAINER -->
-  <div class="chat_container">
+  <!-- Header -->
+  <header class="top-bar">
+    <div class="app-title">🤖 My AI Agent</div>
+    <select id="model">
+      <option value="openai/gpt-3.5-turbo">GPT-3.5</option>
+      <option value="openai/gpt-4o">GPT-4o</option>
+      <option value="anthropic/claude-3-haiku">Claude Haiku</option>
+      <option value="mistralai/mistral-7b">Mistral 7B</option>
+      <option value="google/gemini-pro">Gemini Pro</option>
+    </select>
+  </header>
 
-    <!-- CHAT BOX (ONLY ONE COLUMN) -->
-    <div class="chat_box" style="width:100%; border-right:none;">
-
-      <!-- CHAT MESSAGES -->
-      <div id="chatRoom" class="chat_message">
-
-        <!-- AI MESSAGE -->
-        <div class="message_row other-message">
-          <div class="message-content">
-            <div class="message-text">
-              Hello 👋 I am SmartBot. How can I help you today?
-            </div>
-            <div class="message-time">Now</div>
-          </div>
-        </div>
-
+  <!-- Chat -->
+  <main class="chat-container" id="chat">
+    <div class="chat-message ai">
+      <div class="bubble">
+        Hello 👋 I’m your AI assistant.  
+        Select a model and start chatting.
       </div>
-
-      <!-- CHAT INPUT (BOTTOM) -->
-      <div class="chat_input">
-
-        <div class="myIcon2 iconTag">
-          <i class="fa fa-smile-o ipt_icon"></i>
-        </div>
-
-        <input class="sendMsg" type="text" placeholder="Send a message..." />
-
-        <div class="myIcon2">
-          <i class="fa fa-share send_icon"></i>
-        </div>
-
-      </div>
-
     </div>
+  </main>
 
-  </div>
+  <!-- Input -->
+  <footer class="input-bar">
+    <button id="mic" class="icon-btn">🎙️</button>
+    <textarea id="input" rows="1" placeholder="Type your message…"></textarea>
+    <button id="send" class="icon-btn primary">➤</button>
+  </footer>
 
-  <script src="./friend.js"></script>
-  <script src="./webChat.js"></script>
+</div>
 
+<script>
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+const send = document.getElementById("send");
+const mic = document.getElementById("mic");
+const model = document.getElementById("model");
+
+// Send message
+send.onclick = () => {
+  if (!input.value.trim()) return;
+  addMessage(input.value, "user");
+  input.value = "";
+  fakeAIResponse();
+};
+
+// Fake AI (replace with OpenRouter fetch)
+function fakeAIResponse() {
+  const typing = document.createElement("div");
+  typing.className = "chat-message ai";
+  typing.innerHTML = `<div class="bubble">
+    <div class="typing"><span></span><span></span><span></span></div>
+  </div>`;
+  chat.appendChild(typing);
+  chat.scrollTop = chat.scrollHeight;
+
+  setTimeout(() => {
+    typing.remove();
+    addMessage("AI response will come from OpenRouter API.", "ai");
+  }, 1200);
+}
+
+function addMessage(text, role) {
+  const div = document.createElement("div");
+  div.className = `chat-message ${role}`;
+  div.innerHTML = `<div class="bubble">${text}</div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// Mic (Web Speech API)
+mic.onclick = () => {
+  if (!('webkitSpeechRecognition' in window)) {
+    alert("Speech recognition not supported");
+    return;
+  }
+  const rec = new webkitSpeechRecognition();
+  rec.lang = "en-US";
+  rec.onresult = e => input.value = e.results[0][0].transcript;
+  rec.start();
+};
+</script>
 </body>
 </html>
