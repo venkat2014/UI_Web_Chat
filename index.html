@@ -18,33 +18,67 @@ body {
   height: 100vh;
 }
 
+/* Layout */
 .app {
   height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-/* Header */
+/* Top bar */
 .top-bar {
   height: 56px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 0 16px;
   border-bottom: 1px solid #e5e7eb;
+  gap: 12px;
+}
+
+.menu-btn {
+  font-size: 22px;
+  background: none;
+  border: none;
+  cursor: pointer;
 }
 
 .app-title {
   font-weight: 600;
-  font-size: 16px;
 }
 
-.model-select {
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  padding: 6px 8px;
+/* Left panel */
+.side-panel {
+  position: fixed;
+  top: 0;
+  left: -260px;
+  width: 260px;
+  height: 100%;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  transition: left 0.25s ease;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.side-panel.open {
+  left: 0;
+}
+
+.side-panel h3 {
+  margin-top: 0;
   font-size: 14px;
+  color: #6b7280;
+}
+
+.side-panel button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  border: 1px solid #d1d5db;
   background: #fff;
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
 }
 
 /* Chat */
@@ -55,7 +89,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: #ffffff;
 }
 
 .chat-message {
@@ -70,12 +103,10 @@ body {
   padding: 12px 14px;
   border-radius: 12px;
   font-size: 14px;
-  line-height: 1.4;
 }
 
 .ai .bubble {
   background: #f3f4f6;
-  color: #111827;
 }
 
 .user .bubble {
@@ -89,7 +120,6 @@ body {
   gap: 8px;
   padding: 12px;
   border-top: 1px solid #e5e7eb;
-  background: #ffffff;
 }
 
 textarea {
@@ -98,12 +128,6 @@ textarea {
   border: 1px solid #d1d5db;
   border-radius: 10px;
   padding: 10px;
-  font-size: 14px;
-  outline: none;
-}
-
-textarea:focus {
-  border-color: #2563eb;
 }
 
 .icon-btn {
@@ -112,7 +136,6 @@ textarea:focus {
   border-radius: 10px;
   padding: 0 12px;
   cursor: pointer;
-  font-size: 16px;
 }
 
 .icon-btn.primary {
@@ -120,112 +143,68 @@ textarea:focus {
   color: #ffffff;
   border: none;
 }
-
-/* Typing dots */
-.typing {
-  display: inline-flex;
-  gap: 4px;
-}
-.typing span {
-  width: 6px;
-  height: 6px;
-  background: #9ca3af;
-  border-radius: 50%;
-  animation: blink 1.4s infinite both;
-}
-.typing span:nth-child(2) { animation-delay: .2s; }
-.typing span:nth-child(3) { animation-delay: .4s; }
-
-@keyframes blink {
-  0% { opacity: .2; }
-  20% { opacity: 1; }
-  100% { opacity: .2; }
-}
 </style>
 </head>
 
 <body>
+
+<!-- Left Panel -->
+<div id="sidePanel" class="side-panel">
+  <h3>Menu</h3>
+  <button>➕ New Chat</button>
+  <button>🕘 Chat History</button>
+  <button>⚙️ Settings</button>
+  <button>ℹ️ About</button>
+</div>
+
 <div class="app">
 
   <!-- Header -->
   <header class="top-bar">
+    <button class="menu-btn" onclick="toggleMenu()">☰</button>
     <div class="app-title">My AI Agent</div>
-    <select id="modelSelect" class="model-select">
-      <option value="openai/gpt-3.5-turbo">GPT-3.5</option>
-      <option value="openai/gpt-4o">GPT-4o</option>
-      <option value="anthropic/claude-3-haiku">Claude Haiku</option>
-      <option value="mistralai/mistral-7b">Mistral 7B</option>
-      <option value="google/gemini-pro">Gemini Pro</option>
-    </select>
   </header>
 
   <!-- Chat -->
   <main class="chat-container" id="chat">
     <div class="chat-message ai">
       <div class="bubble">
-        Hello 👋 I’m your AI assistant.  
-        Select a model and start chatting.
+        Hello 👋 I’m your AI assistant.
       </div>
     </div>
   </main>
 
   <!-- Input -->
   <footer class="input-bar">
-    <button id="micBtn" class="icon-btn">🎙️</button>
-    <textarea id="userInput" rows="1" placeholder="Type your message…"></textarea>
-    <button id="sendBtn" class="icon-btn primary">➤</button>
+    <button class="icon-btn">🎙️</button>
+    <textarea id="input" rows="1" placeholder="Type your message…"></textarea>
+    <button class="icon-btn primary" onclick="sendMsg()">➤</button>
   </footer>
 
 </div>
 
 <script>
-const chat = document.getElementById("chat");
-const input = document.getElementById("userInput");
-const send = document.getElementById("sendBtn");
-const mic = document.getElementById("micBtn");
+function toggleMenu() {
+  document.getElementById("sidePanel").classList.toggle("open");
+}
 
-send.onclick = () => {
+function sendMsg() {
+  const input = document.getElementById("input");
   if (!input.value.trim()) return;
-  addMessage(input.value, "user");
+
+  const chat = document.getElementById("chat");
+  chat.innerHTML += `
+    <div class="chat-message user">
+      <div class="bubble">${input.value}</div>
+    </div>
+    <div class="chat-message ai">
+      <div class="bubble">AI response will come here.</div>
+    </div>
+  `;
   input.value = "";
-  showTyping();
-};
-
-function addMessage(text, role) {
-  const div = document.createElement("div");
-  div.className = `chat-message ${role}`;
-  div.innerHTML = `<div class="bubble">${text}</div>`;
-  chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
 }
-
-function showTyping() {
-  const typing = document.createElement("div");
-  typing.className = "chat-message ai";
-  typing.innerHTML = `
-    <div class="bubble">
-      <div class="typing"><span></span><span></span><span></span></div>
-    </div>`;
-  chat.appendChild(typing);
-  chat.scrollTop = chat.scrollHeight;
-
-  setTimeout(() => {
-    typing.remove();
-    addMessage("AI response will come from OpenRouter API.", "ai");
-  }, 1200);
-}
-
-// Mic
-mic.onclick = () => {
-  if (!('webkitSpeechRecognition' in window)) {
-    alert("Speech recognition not supported");
-    return;
-  }
-  const rec = new webkitSpeechRecognition();
-  rec.lang = "en-US";
-  rec.onresult = e => input.value = e.results[0][0].transcript;
-  rec.start();
-};
 </script>
+
 </body>
 </html>
