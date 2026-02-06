@@ -3,71 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My First AI Agent</title>
+<title>My AI Agent</title>
 
-<!-- Font -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
-:root {
-  --bg: #0f172a;
-  --card: rgba(255,255,255,0.08);
-  --border: rgba(255,255,255,0.15);
-  --text: #e5e7eb;
-  --muted: #94a3b8;
-  --accent: #38bdf8;
-}
-
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
-  background: radial-gradient(circle at top, #1e293b, #020617);
-  color: var(--text);
+  background: #ffffff;
+  color: #111827;
   height: 100vh;
-  display: flex;
 }
 
 .app {
-  max-width: 420px;
-  width: 100%;
-  margin: auto;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(14px);
 }
 
 /* Header */
 .top-bar {
-  padding: 12px;
+  height: 56px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--border);
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .app-title {
   font-weight: 600;
+  font-size: 16px;
 }
 
 .model-select {
-  background: var(--card);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 14px;
+  background: #fff;
 }
 
 /* Chat */
 .chat-container {
   flex: 1;
+  padding: 16px;
   overflow-y: auto;
-  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  background: #ffffff;
 }
 
 .chat-message {
@@ -78,54 +66,58 @@ body {
 .chat-message.user { justify-content: flex-end; }
 
 .bubble {
-  max-width: 80%;
+  max-width: 75%;
   padding: 12px 14px;
-  border-radius: 16px;
+  border-radius: 12px;
+  font-size: 14px;
   line-height: 1.4;
 }
 
 .ai .bubble {
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: #f3f4f6;
+  color: #111827;
 }
 
 .user .bubble {
-  background: linear-gradient(135deg, #38bdf8, #6366f1);
-  color: #020617;
+  background: #2563eb;
+  color: #ffffff;
 }
 
 /* Input */
 .input-bar {
   display: flex;
   gap: 8px;
-  padding: 10px;
-  border-top: 1px solid var(--border);
+  padding: 12px;
+  border-top: 1px solid #e5e7eb;
+  background: #ffffff;
 }
 
 textarea {
   flex: 1;
   resize: none;
-  background: var(--card);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
   padding: 10px;
-  font-family: inherit;
+  font-size: 14px;
   outline: none;
 }
 
+textarea:focus {
+  border-color: #2563eb;
+}
+
 .icon-btn {
-  background: var(--card);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 12px;
-  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 0 12px;
   cursor: pointer;
+  font-size: 16px;
 }
 
 .icon-btn.primary {
-  background: var(--accent);
-  color: #020617;
+  background: #2563eb;
+  color: #ffffff;
   border: none;
 }
 
@@ -137,7 +129,7 @@ textarea {
 .typing span {
   width: 6px;
   height: 6px;
-  background: var(--muted);
+  background: #9ca3af;
   border-radius: 50%;
   animation: blink 1.4s infinite both;
 }
@@ -157,8 +149,8 @@ textarea {
 
   <!-- Header -->
   <header class="top-bar">
-    <div class="app-title">🤖 My AI Agent</div>
-    <select id="model">
+    <div class="app-title">My AI Agent</div>
+    <select id="modelSelect" class="model-select">
       <option value="openai/gpt-3.5-turbo">GPT-3.5</option>
       <option value="openai/gpt-4o">GPT-4o</option>
       <option value="anthropic/claude-3-haiku">Claude Haiku</option>
@@ -179,43 +171,25 @@ textarea {
 
   <!-- Input -->
   <footer class="input-bar">
-    <button id="mic" class="icon-btn">🎙️</button>
-    <textarea id="input" rows="1" placeholder="Type your message…"></textarea>
-    <button id="send" class="icon-btn primary">➤</button>
+    <button id="micBtn" class="icon-btn">🎙️</button>
+    <textarea id="userInput" rows="1" placeholder="Type your message…"></textarea>
+    <button id="sendBtn" class="icon-btn primary">➤</button>
   </footer>
 
 </div>
 
 <script>
 const chat = document.getElementById("chat");
-const input = document.getElementById("input");
-const send = document.getElementById("send");
-const mic = document.getElementById("mic");
-const model = document.getElementById("model");
+const input = document.getElementById("userInput");
+const send = document.getElementById("sendBtn");
+const mic = document.getElementById("micBtn");
 
-// Send message
 send.onclick = () => {
   if (!input.value.trim()) return;
   addMessage(input.value, "user");
   input.value = "";
-  fakeAIResponse();
+  showTyping();
 };
-
-// Fake AI (replace with OpenRouter fetch)
-function fakeAIResponse() {
-  const typing = document.createElement("div");
-  typing.className = "chat-message ai";
-  typing.innerHTML = `<div class="bubble">
-    <div class="typing"><span></span><span></span><span></span></div>
-  </div>`;
-  chat.appendChild(typing);
-  chat.scrollTop = chat.scrollHeight;
-
-  setTimeout(() => {
-    typing.remove();
-    addMessage("AI response will come from OpenRouter API.", "ai");
-  }, 1200);
-}
 
 function addMessage(text, role) {
   const div = document.createElement("div");
@@ -225,7 +199,23 @@ function addMessage(text, role) {
   chat.scrollTop = chat.scrollHeight;
 }
 
-// Mic (Web Speech API)
+function showTyping() {
+  const typing = document.createElement("div");
+  typing.className = "chat-message ai";
+  typing.innerHTML = `
+    <div class="bubble">
+      <div class="typing"><span></span><span></span><span></span></div>
+    </div>`;
+  chat.appendChild(typing);
+  chat.scrollTop = chat.scrollHeight;
+
+  setTimeout(() => {
+    typing.remove();
+    addMessage("AI response will come from OpenRouter API.", "ai");
+  }, 1200);
+}
+
+// Mic
 mic.onclick = () => {
   if (!('webkitSpeechRecognition' in window)) {
     alert("Speech recognition not supported");
