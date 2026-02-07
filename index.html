@@ -103,6 +103,7 @@ body {
   padding: 12px 14px;
   border-radius: 12px;
   font-size: 14px;
+  line-height: 1.4;
 }
 
 .ai .bubble {
@@ -128,6 +129,8 @@ textarea {
   border: 1px solid #d1d5db;
   border-radius: 10px;
   padding: 10px;
+  font-family: inherit;
+  font-size: 14px;
 }
 
 .icon-btn {
@@ -151,10 +154,10 @@ textarea {
 <!-- Left Panel -->
 <div id="sidePanel" class="side-panel">
   <h3>Menu</h3>
-  <button>➕ New Chat</button>
-  <button>🕘 Chat History</button>
-  <button>⚙️ Settings</button>
-  <button>ℹ️ About</button>
+  <button onclick="newChat()">➕ New Chat</button>
+  <button disabled>🕘 Chat History</button>
+  <button disabled>⚙️ Settings</button>
+  <button disabled>ℹ️ About</button>
 </div>
 
 <div class="app">
@@ -169,7 +172,7 @@ textarea {
   <main class="chat-container" id="chat">
     <div class="chat-message ai">
       <div class="bubble">
-        Hello 👋 I’m your AI assistant.
+        Hello 👋 I’m your AI assistant. How can I help you?
       </div>
     </div>
   </main>
@@ -184,25 +187,99 @@ textarea {
 </div>
 
 <script>
+/* =============================
+   CONFIG
+============================= */
+const OPENROUTER_API_KEY = "PASTE_YOUR_OPENROUTER_KEY_HERE";
+const MODEL = "mistralai/mistral-7b-instruct";
+
+/* =============================
+   UI HELPERS
+============================= */
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+
 function toggleMenu() {
   document.getElementById("sidePanel").classList.toggle("open");
 }
 
-function sendMsg() {
-  const input = document.getElementById("input");
-  if (!input.value.trim()) return;
-
-  const chat = document.getElementById("chat");
-  chat.innerHTML += `
-    <div class="chat-message user">
-      <div class="bubble">${input.value}</div>
-    </div>
+function newChat() {
+  chat.innerHTML = `
     <div class="chat-message ai">
-      <div class="bubble">AI response will come here.</div>
-    </div>
-  `;
-  input.value = "";
+      <div class="bubble">
+        New chat started. How can I help you?
+      </div>
+    </div>`;
+  toggleMenu();
+}
+
+function addMessage(text, role) {
+  const div = document.createElement("div");
+  div.className = `chat-message ${role}`;
+  div.innerHTML = `<div class="bubble">${text}</div>`;
+  chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
+}
+
+function showTyping() {
+  const div = document.createElement("div");
+  div.id = "typing";
+  div.className = "chat-message ai";
+  div.innerHTML = `<div class="bubble">Thinking…</div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById("typing");
+  if (t) t.remove();
+}
+
+/* =============================
+   REAL OPENROUTER CALL
+============================= */
+async function sendMsg() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  addMessage(text, "user");
+  input.value = "";
+  showTyping();
+
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + OPENROUTER_API_KEY,
+        "Content-Type": "application/json",
+        "HTTP-Referer": window.location.origin,
+        "X-Title": "My AI Agent"
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: "You are a helpful AI assistant." },
+          { role: "user", content: text }
+        ],
+        temperature: 0.7,
+        max_tokens: 800
+      })
+    });
+
+    const data = await res.json();
+    removeTyping();
+
+    if (data.error) {
+      addMessage("Error: " + data.error.message, "ai");
+      return;
+    }
+
+    addMessage(data.choices[0].message.content, "ai");
+
+  } catch (e) {
+    removeTyping();
+    addMessage("Network error. Please try again.", "ai");
+  }
 }
 </script>
 
