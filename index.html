@@ -1,1 +1,194 @@
-<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"> <title>AI Agent – Temp Debug</title> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <style> body { font-family: Arial, sans-serif; margin:0; height:100vh; display:flex; flex-direction:column; } #chat { flex:1; padding:10px; overflow:auto; border-bottom:1px solid #ccc; } .msg { margin:6px 0; } .user { color:#1d4ed8; } .ai { color:#111827; } .error { color:#b91c1c; } #bar { display:flex; padding:10px; gap:6px; } #input { flex:1; padding:8px; font-size:14px; } button { padding:8px 14px; } #status { font-size:12px; padding:6px; color:#555; } </style> </head> <body> <div id="chat"></div> <div id="status">Status: idle</div> <div id="bar"> <input id="input" type="text" placeholder="Type and press Enter…" /> <button id="sendBtn">Send</button> </div> <script> /* ================= TEMP CONFIG ================= */ const OPENROUTER_API_KEY = "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"; const MODEL = "mistralai/mistral-7b-instruct"; /* ================= STATE ================= */ let history = [ { role: "system", content: "You are a helpful AI assistant." } ]; /* ================= DOM ================= */ const chat = document.getElementById("chat"); const input = document.getElementById("input"); const statusEl = document.getElementById("status"); const sendBtn = document.getElementById("sendBtn"); /* ================= HELPERS ================= */ function logMsg(text, cls) { const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text; chat.appendChild(d); chat.scrollTop = chat.scrollHeight; } function setStatus(t) { statusEl.textContent = "Status: " + t; console.log("[STATUS]", t); } /* ================= EVENTS ================= */ sendBtn.onclick = sendMsg; input.addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); sendMsg(); } }); /* ================= CORE ================= */ async function sendMsg() { const text = input.value.trim(); if (!text) { setStatus("empty input"); return; } console.log("[SEND]", text); logMsg("You: " + text, "user"); history.push({ role: "user", content: text }); input.value = ""; setStatus("sending request…"); try { const res = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST", headers: { "Authorization": "Bearer " + OPENROUTER_API_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, messages: history, max_tokens: 300 }) }); setStatus("response received (HTTP " + res.status + ")"); if (!res.ok) { logMsg("HTTP ERROR " + res.status, "error"); return; } const data = await res.json(); console.log("[RESPONSE]", data); if (data.error) { logMsg("API ERROR: " + JSON.stringify(data.error), "error"); return; } const reply = data?.choices?.[0]?.message?.content; if (!reply) { logMsg("BAD RESPONSE FORMAT", "error"); return; } logMsg("AI: " + reply, "ai"); history.push({ role: "assistant", content: reply }); setStatus("idle"); } catch (err) { console.error("[FETCH ERROR]", err); logMsg("JS / NETWORK ERROR: " + err.message, "error"); setStatus("failed"); } } </script> </body> </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Agent – Temp Debug</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #chat {
+      flex: 1;
+      padding: 10px;
+      overflow: auto;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .msg {
+      margin: 6px 0;
+    }
+
+    .user {
+      color: #1d4ed8;
+    }
+
+    .ai {
+      color: #111827;
+    }
+
+    .error {
+      color: #b91c1c;
+    }
+
+    #bar {
+      display: flex;
+      padding: 10px;
+      gap: 6px;
+    }
+
+    #input {
+      flex: 1;
+      padding: 8px;
+      font-size: 14px;
+    }
+
+    button {
+      padding: 8px 14px;
+    }
+
+    #status {
+      font-size: 12px;
+      padding: 6px;
+      color: #555;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="chat"></div>
+  <div id="status">Status: idle</div>
+
+  <div id="bar">
+    <input
+      id="input"
+      type="text"
+      placeholder="Type and press Enter…"
+    />
+    <button id="sendBtn">Send</button>
+  </div>
+
+  <script>
+    /* ================= TEMP CONFIG ================= */
+    const OPENROUTER_API_KEY =
+      "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";
+
+    const MODEL = "mistralai/mistral-7b-instruct";
+
+    /* ================= STATE ================= */
+    let history = [
+      { role: "system", content: "You are a helpful AI assistant." }
+    ];
+
+    /* ================= DOM ================= */
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("input");
+    const statusEl = document.getElementById("status");
+    const sendBtn = document.getElementById("sendBtn");
+
+    /* ================= HELPERS ================= */
+    function logMsg(text, cls) {
+      const d = document.createElement("div");
+      d.className = "msg " + cls;
+      d.textContent = text;
+      chat.appendChild(d);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function setStatus(t) {
+      statusEl.textContent = "Status: " + t;
+      console.log("[STATUS]", t);
+    }
+
+    /* ================= EVENTS ================= */
+    sendBtn.onclick = sendMsg;
+
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        sendMsg();
+      }
+    });
+
+    /* ================= CORE ================= */
+    async function sendMsg() {
+      const text = input.value.trim();
+
+      if (!text) {
+        setStatus("empty input");
+        return;
+      }
+
+      console.log("[SEND]", text);
+      logMsg("You: " + text, "user");
+
+      history.push({ role: "user", content: text });
+      input.value = "";
+
+      setStatus("sending request…");
+
+      try {
+        const res = await fetch(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Authorization": "Bearer " + OPENROUTER_API_KEY,
+              "Content-Type": "application/json",
+
+              /* 🔹 REQUIRED FOR BROWSER REQUESTS 🔹 */
+              "HTTP-Referer": window.location.origin,
+              "X-Title": "AI Agent Temp Debug"
+            },
+            body: JSON.stringify({
+              model: MODEL,
+              messages: history,
+              max_tokens: 300
+            })
+          }
+        );
+
+        setStatus("response received (HTTP " + res.status + ")");
+
+        if (!res.ok) {
+          logMsg("HTTP ERROR " + res.status, "error");
+          return;
+        }
+
+        const data = await res.json();
+        console.log("[RESPONSE]", data);
+
+        if (data.error) {
+          logMsg("API ERROR: " + JSON.stringify(data.error), "error");
+          return;
+        }
+
+        const reply = data?.choices?.[0]?.message?.content;
+
+        if (!reply) {
+          logMsg("BAD RESPONSE FORMAT", "error");
+          return;
+        }
+
+        logMsg("AI: " + reply, "ai");
+        history.push({ role: "assistant", content: reply });
+
+        setStatus("idle");
+
+      } catch (err) {
+        console.error("[FETCH ERROR]", err);
+        logMsg("JS / NETWORK ERROR: " + err.message, "error");
+        setStatus("failed");
+      }
+    }
+  </script>
+
+</body>
+</html>
