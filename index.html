@@ -2,242 +2,130 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<title>AI Agent – Temp Debug</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My AI Agent (Temp Key)</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
-* { box-sizing: border-box; }
-
-body {
-  margin: 0;
-  font-family: 'Inter', sans-serif;
-  background: #ffffff;
-  color: #111827;
-  height: 100vh;
-}
-
-.app {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Header */
-.top-bar {
-  height: 56px;
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.app-title {
-  font-weight: 600;
-}
-
-/* Chat */
-.chat-container {
-  flex: 1;
-  padding: 16px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.chat-message {
-  display: flex;
-}
-
-.chat-message.ai { justify-content: flex-start; }
-.chat-message.user { justify-content: flex-end; }
-
-.bubble {
-  max-width: 75%;
-  padding: 12px 14px;
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.ai .bubble {
-  background: #f3f4f6;
-}
-
-.user .bubble {
-  background: #2563eb;
-  color: #ffffff;
-}
-
-/* Input */
-.input-bar {
-  display: flex;
-  gap: 8px;
-  padding: 12px;
-  border-top: 1px solid #e5e7eb;
-}
-
-#input {
-  flex: 1;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  padding: 10px;
-  font-size: 14px;
-}
-
-button {
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  border-radius: 10px;
-  padding: 0 14px;
-  cursor: pointer;
-}
-
-button.send {
-  background: #2563eb;
-  color: #ffffff;
-  border: none;
-}
-
-/* Error box */
-.error-box {
-  background: #fee2e2;
-  color: #991b1b;
-  padding: 10px;
-  font-size: 13px;
-  border-radius: 8px;
-}
+body { font-family: Arial, sans-serif; margin:0; height:100vh; display:flex; flex-direction:column; }
+#chat { flex:1; padding:10px; overflow:auto; border-bottom:1px solid #ccc; }
+.msg { margin:6px 0; }
+.user { color:#1d4ed8; }
+.ai { color:#111827; }
+.error { color:#b91c1c; }
+#bar { display:flex; padding:10px; gap:6px; }
+#input { flex:1; padding:8px; font-size:14px; }
+button { padding:8px 14px; }
+#status { font-size:12px; padding:6px; color:#555; }
 </style>
 </head>
 
 <body>
-<div class="app">
 
-  <header class="top-bar">
-    <div class="app-title">My AI Agent (Temp Key)</div>
-  </header>
+<div id="chat"></div>
+<div id="status">Status: idle</div>
 
-  <main class="chat-container" id="chat"></main>
-
-  <footer class="input-bar">
-    <input
-      id="input"
-      type="text"
-      placeholder="Type your message…"
-      autocomplete="off"
-    />
-    <button class="send" onclick="sendMsg()">➤</button>
-  </footer>
-
+<div id="bar">
+  <input id="input" type="text" placeholder="Type and press Enter…" />
+  <button id="sendBtn">Send</button>
 </div>
 
 <script>
-/* =================================================
-   TEMP CONFIG (KEY IS HERE)
-================================================= */
-const OPENROUTER_API_KEY = "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
-";
+/* ================= TEMP CONFIG ================= */
+const OPENROUTER_API_KEY = "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";
 const MODEL = "mistralai/mistral-7b-instruct";
 
-/* =================================================
-   SESSION CHAT HISTORY (IN MEMORY)
-================================================= */
-let chatHistory = [
+/* ================= STATE ================= */
+let history = [
   { role: "system", content: "You are a helpful AI assistant." }
 ];
 
-/* =================================================
-   DOM
-================================================= */
+/* ================= DOM ================= */
 const chat = document.getElementById("chat");
 const input = document.getElementById("input");
+const statusEl = document.getElementById("status");
+const sendBtn = document.getElementById("sendBtn");
 
-/* =================================================
-   HELPERS
-================================================= */
-function addMessage(text, role) {
-  const div = document.createElement("div");
-  div.className = `chat-message ${role}`;
-  div.innerHTML = `<div class="bubble">${text}</div>`;
-  chat.appendChild(div);
+/* ================= HELPERS ================= */
+function logMsg(text, cls) {
+  const d = document.createElement("div");
+  d.className = "msg " + cls;
+  d.textContent = text;
+  chat.appendChild(d);
   chat.scrollTop = chat.scrollHeight;
 }
 
-function showError(msg) {
-  const div = document.createElement("div");
-  div.className = "error-box";
-  div.innerText = msg;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
+function setStatus(t) {
+  statusEl.textContent = "Status: " + t;
+  console.log("[STATUS]", t);
 }
 
-/* ENTER key sends */
-input.addEventListener("keydown", e => {
+/* ================= EVENTS ================= */
+sendBtn.onclick = sendMsg;
+
+input.addEventListener("keydown", function(e) {
   if (e.key === "Enter") {
     e.preventDefault();
     sendMsg();
   }
 });
 
-/* =================================================
-   SEND MESSAGE (WITH FULL ERROR HANDLING)
-================================================= */
+/* ================= CORE ================= */
 async function sendMsg() {
   const text = input.value.trim();
-  if (!text) return;
+  if (!text) {
+    setStatus("empty input");
+    return;
+  }
 
+  console.log("[SEND]", text);
+  logMsg("You: " + text, "user");
+  history.push({ role: "user", content: text });
   input.value = "";
-  addMessage(text, "user");
-
-  chatHistory.push({ role: "user", content: text });
+  setStatus("sending request…");
 
   try {
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer " + OPENROUTER_API_KEY,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: chatHistory,
-          temperature: 0.7,
-          max_tokens: 800
-        })
-      }
-    );
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + OPENROUTER_API_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: history,
+        max_tokens: 300
+      })
+    });
 
-    /* HTTP-level error */
-    if (!response.ok) {
-      showError(
-        "HTTP ERROR " + response.status + " : " + response.statusText
-      );
+    setStatus("response received (HTTP " + res.status + ")");
+
+    if (!res.ok) {
+      logMsg("HTTP ERROR " + res.status, "error");
       return;
     }
 
-    const data = await response.json();
+    const data = await res.json();
+    console.log("[RESPONSE]", data);
 
-    /* API-level error */
     if (data.error) {
-      showError("API ERROR: " + JSON.stringify(data.error));
+      logMsg("API ERROR: " + JSON.stringify(data.error), "error");
       return;
     }
 
-    const reply = data.choices?.[0]?.message?.content;
+    const reply = data?.choices?.[0]?.message?.content;
     if (!reply) {
-      showError("Unexpected response format: " + JSON.stringify(data));
+      logMsg("BAD RESPONSE FORMAT", "error");
       return;
     }
 
-    addMessage(reply, "ai");
-    chatHistory.push({ role: "assistant", content: reply });
+    logMsg("AI: " + reply, "ai");
+    history.push({ role: "assistant", content: reply });
+    setStatus("idle");
 
   } catch (err) {
-    showError("NETWORK / JS ERROR: " + err.message);
+    console.error("[FETCH ERROR]", err);
+    logMsg("JS / NETWORK ERROR: " + err.message, "error");
+    setStatus("failed");
   }
 }
 </script>
