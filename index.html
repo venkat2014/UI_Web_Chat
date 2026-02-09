@@ -3,7 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <title>AI Agent – Combo1</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#4361ee">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="AI Agent">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -31,6 +38,9 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      /* Safe area for notched devices */
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
     .app {
@@ -128,6 +138,8 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
+      /* Prevent pull-to-refresh */
+      overscroll-behavior: contain;
     }
 
     .msg {
@@ -166,6 +178,11 @@
       display: flex;
       gap: 8px;
       background: white;
+      /* Stick to bottom on mobile */
+      position: sticky;
+      bottom: 0;
+      /* Safe area for bottom bars */
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
     }
 
     #input {
@@ -177,6 +194,7 @@
       font-size: 14px;
       outline: none;
       transition: border 0.2s;
+      min-height: 44px; /* Minimum touch target */
     }
 
     #input:focus {
@@ -194,6 +212,7 @@
       cursor: pointer;
       transition: background 0.2s;
       flex-shrink: 0;
+      min-height: 44px; /* Minimum touch target */
     }
 
     button:hover {
@@ -231,6 +250,11 @@
         transform: translateX(-100%);
         width: 80%;
         max-width: 320px;
+        position: fixed;
+        height: 100%;
+        top: 0;
+        left: 0;
+        z-index: 20;
       }
 
       .sidebar-toggle:checked ~ .sidebar {
@@ -239,24 +263,27 @@
 
       .sidebar-toggle-btn {
         position: absolute;
-        top: 16px;
+        top: env(safe-area-inset-top, 16px);
         left: 16px;
         z-index: 20;
         background: var(--sidebar);
         color: white;
         border: none;
-        width: 40px;
-        height: 40px;
+        width: 44px;
+        height: 44px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 20px;
         cursor: pointer;
+        /* Minimum touch target */
+        min-width: 44px;
+        min-height: 44px;
       }
 
       .main {
-        padding-top: 40px;
+        padding-top: 60px;
       }
 
       #chat {
@@ -266,6 +293,43 @@
       .msg {
         max-width: 90%;
       }
+
+      /* Full-width input on mobile */
+      #bar {
+        padding: 12px 16px;
+        gap: 8px;
+      }
+
+      #input {
+        padding: 12px 16px;
+        font-size: 16px; /* Prevent zoom on iOS */
+      }
+    }
+
+    /* PWA INSTALL PROMPT */
+    #installPrompt {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #4361ee;
+      color: white;
+      padding: 12px 16px;
+      text-align: center;
+      display: none;
+      z-index: 100;
+      font-size: 14px;
+    }
+
+    #installPrompt button {
+      background: white;
+      color: #4361ee;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-weight: 500;
+      margin-left: 8px;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -303,6 +367,11 @@
     </main>
   </div>
 
+  <div id="installPrompt">
+    Install AI Agent for offline use!
+    <button id="installBtn">Install</button>
+  </div>
+
   <script>
     /* ================= TEMP CONFIG ================= */
    
@@ -319,6 +388,31 @@
     const statusEl = document.getElementById("status");
     const sendBtn = document.getElementById("sendBtn");
     const micBtn = document.getElementById("micBtn");
+    const installPrompt = document.getElementById("installPrompt");
+    const installBtn = document.getElementById("installBtn");
+
+    /* ================= PWA INSTALL PROMPT ================= */
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installPrompt.style.display = 'block';
+    });
+
+    if (installBtn) {
+      installBtn.addEventListener('click', () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('User accepted the install prompt');
+            }
+            installPrompt.style.display = 'none';
+            deferredPrompt = null;
+          });
+        }
+      });
+    }
 
     /* ================= HELPERS ================= */
     function logMsg(text, cls) {
@@ -510,6 +604,25 @@
     if ('speechSynthesis' in window) {
       speechSynthesis.onvoiceschanged = () => {};
     }
+
+    /* ================= MOBILE OPTIMIZATIONS ================= */
+    // Prevent zoom on input focus (iOS)
+    document.addEventListener('DOMContentLoaded', () => {
+      const inputs = document.querySelectorAll('input, textarea');
+      inputs.forEach(input => {
+        input.addEventListener('focus', () => {
+          if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+              if (window.visualViewport.height < window.innerHeight) {
+                document.body.style.overflow = 'hidden';
+              } else {
+                document.body.style.overflow = '';
+              }
+            });
+          }
+        });
+      });
+    });
   </script>
 </body>
 </html>
