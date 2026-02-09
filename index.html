@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>AI Agent – Combo1</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+ 
   <meta name="theme-color" content="#4361ee">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,6 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     :root {
+      --vh: 1vh;
       --bg: #f0f2f5;
       --sidebar: #202123;
       --user-bg: #4361ee;
@@ -331,6 +333,50 @@
       margin-left: 8px;
       cursor: pointer;
     }
+
+/* MOBILE FULL-SCREEN FIX */
+@media (max-width: 768px) {
+  html, body {
+    height: 100vh;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .app {
+    height: 100vh !important;
+    min-height: 100vh !important;
+    flex-direction: column !important;
+  }
+  
+  .main {
+    height: calc(100vh - 60px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  #chat {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 12px !important;
+  }
+  
+  #bar {
+    position: sticky !important;
+    bottom: 0 !important;
+    padding: 12px !important;
+    background: white !important;
+    z-index: 10 !important;
+  }
+  
+  /* Prevent input zoom on iOS */
+  #input {
+    font-size: 16px !important;
+  }
+}
+
+    
   </style>
 </head>
 
@@ -623,6 +669,25 @@
         });
       });
     });
+
+// MOBILE HEIGHT FIX
+function setMobileHeight() {
+  if (window.visualViewport) {
+    document.body.style.height = `${window.visualViewport.height}px`;
+    document.querySelector('.app').style.height = `${window.visualViewport.height}px`;
+  } else {
+    document.body.style.height = '100vh';
+  }
+}
+
+// Run on load and resize
+window.addEventListener('load', setMobileHeight);
+window.addEventListener('resize', setMobileHeight);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', setMobileHeight);
+}
+
+    
   </script>
 </body>
 </html>
