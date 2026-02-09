@@ -200,6 +200,27 @@
       background: #3a56d4;
     }
 
+    /* MIC BUTTON */
+    #micBtn {
+      background: #ff6b6b;
+      width: 44px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #micBtn.recording {
+      background: #ff0000;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+
     /* MOBILE RESPONSIVE */
     @media (max-width: 768px) {
       .app {
@@ -274,8 +295,9 @@
         <input
           id="input"
           type="text"
-          placeholder="Type a message..."
+          placeholder="Type or tap mic to speak..."
         />
+        <button id="micBtn">🎤</button>
         <button id="sendBtn">Send</button>
       </div>
     </main>
@@ -284,7 +306,7 @@
   <script>
     /* ================= TEMP CONFIG ================= */
    
-const MODEL = "mistralai/mistral-7b-instruct";
+    const MODEL = "mistralai/mistral-7b-instruct";
 
     /* ================= STATE ================= */
     let history = [
@@ -296,6 +318,7 @@ const MODEL = "mistralai/mistral-7b-instruct";
     const input = document.getElementById("input");
     const statusEl = document.getElementById("status");
     const sendBtn = document.getElementById("sendBtn");
+    const micBtn = document.getElementById("micBtn");
 
     /* ================= HELPERS ================= */
     function logMsg(text, cls) {
@@ -311,8 +334,72 @@ const MODEL = "mistralai/mistral-7b-instruct";
       console.log("[STATUS]", t);
     }
 
+    /* ================= VOICE RECOGNITION ================= */
+    let recognition;
+    
+    function initVoice() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        micBtn.style.display = 'none';
+        return;
+      }
+      
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = detectLanguage(); // Auto-detect language
+      
+      recognition.onstart = () => {
+        micBtn.classList.add('recording');
+        setStatus('Listening...');
+      };
+      
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        input.value = transcript;
+        micBtn.classList.remove('recording');
+        setStatus('idle');
+        sendMsg(); // Auto-send after speech
+      };
+      
+      recognition.onerror = (event) => {
+        micBtn.classList.remove('recording');
+        setStatus('Voice error: ' + event.error);
+        console.error('Speech recognition error', event.error);
+      };
+      
+      recognition.onend = () => {
+        micBtn.classList.remove('recording');
+        if (statusEl.textContent.includes('Listening')) {
+          setStatus('idle');
+        }
+      };
+    }
+    
+    function detectLanguage() {
+      // Auto-detect based on browser language
+      const userLang = navigator.language || navigator.userLanguage;
+      if (userLang.startsWith('te')) return 'te-IN'; // Telugu
+      if (userLang.startsWith('hi')) return 'hi-IN'; // Hindi
+      if (userLang.startsWith('ta')) return 'ta-IN'; // Tamil
+      if (userLang.startsWith('kn')) return 'kn-IN'; // Kannada
+      return 'en-US'; // Default
+    }
+    
+    // Initialize voice on load
+    if (typeof window !== 'undefined') {
+      initVoice();
+    }
+
     /* ================= EVENTS ================= */
     sendBtn.onclick = sendMsg;
+    micBtn.onclick = () => {
+      if (recognition) {
+        recognition.start();
+      } else {
+        alert('Voice not supported in this browser. Use Chrome/Edge.');
+      }
+    };
 
     input.addEventListener("keydown", function (e) {
       if (e.key === "Enter") {
