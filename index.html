@@ -391,6 +391,36 @@
       initVoice();
     }
 
+    /* ================= SPEECH SYNTHESIS ================= */
+    function speakText(text) {
+      if (!('speechSynthesis' in window)) return;
+      
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = detectLanguage(); // Match input language
+      
+      // Find best voice for the language
+      const voices = speechSynthesis.getVoices();
+      const langCode = utterance.lang.split('-')[0];
+      
+      // Try to find a native voice
+      const preferredVoice = voices.find(v => 
+        v.lang.startsWith(langCode) && 
+        (v.name.includes('Google') || v.name.includes('Microsoft') || v.localService)
+      );
+      
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+      
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      
+      speechSynthesis.speak(utterance);
+    }
+
     /* ================= EVENTS ================= */
     sendBtn.onclick = sendMsg;
     micBtn.onclick = () => {
@@ -464,6 +494,9 @@
         logMsg("AI: " + reply, "ai");
         history.push({ role: "assistant", content: reply });
 
+        // 🔊 SPEAK THE REPLY
+        speakText(reply);
+
         setStatus("idle");
 
       } catch (err) {
@@ -471,6 +504,11 @@
         logMsg("JS / NETWORK ERROR: " + err.message, "error");
         setStatus("failed");
       }
+    }
+
+    // Load voices (needed for some browsers)
+    if ('speechSynthesis' in window) {
+      speechSynthesis.onvoiceschanged = () => {};
     }
   </script>
 </body>
