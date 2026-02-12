@@ -5,6 +5,7 @@ export default async (req) => {
   const { text = '', lang = 'en' } = await req.json();
   const safeLang = ['en','hi','te','ta','kn','ml'].includes(lang) ? lang : 'en';
   
+  // ✅ FIXED: Removed extra spaces after "tl="
   const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${safeLang}&q=${encodeURIComponent(text)}&ttsspeed=1`;
   
   // Add User-Agent to avoid block
