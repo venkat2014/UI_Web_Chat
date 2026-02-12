@@ -14,7 +14,7 @@ export default async function handler(req) {
     const allowed = ['en', 'hi', 'te', 'ta', 'kn', 'ml'];
     const safeLang = allowed.includes(lang) ? lang : 'en';
 
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${safeLang}&q=${encodeURIComponent(text)}`;
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${safeLang}&q=${encodeURIComponent(text)}&ttsspeed=1`;
 
     const response = await fetch(url);
     
