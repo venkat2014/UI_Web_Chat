@@ -320,27 +320,35 @@
       return 'en-US';
     }
 
-    /* ================= SPEECH SYNTHESIS ================= */
-    function speakText(text) {
-      if (!('speechSynthesis' in window)) return;
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = detectLanguage();
-      
-      const voices = speechSynthesis.getVoices();
-      const langCode = utterance.lang.split('-')[0];
-      const preferredVoice = voices.find(v => 
-        v.lang.startsWith(langCode) && 
-        (v.name.includes('Google') || v.name.includes('Microsoft') || v.localService)
-      );
-      
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
+    /* ================= SPEECH SYNTHESIS (GOOGLE TTS) ================= */
+    async function speakText(text) {
+      // Auto-detect language from text
+      let lang = 'en';
+      if (/[\u0900-\u097F]/.test(text)) lang = 'hi'; // Hindi
+      if (/[\u0C00-\u0C7F]/.test(text)) lang = 'te'; // Telugu
+      if (/[\u0B80-\u0BFF]/.test(text)) lang = 'ta'; // Tamil
+      if (/[\u0C80-\u0CFF]/.test(text)) lang = 'kn'; // Kannada
+      if (/[\u0D00-\u0D7F]/.test(text)) lang = 'ml'; // Malayalam
+
+      try {
+        const response = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, lang })
+        });
+
+        if (!response.ok) return;
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.onended = () => URL.revokeObjectURL(audioUrl);
+        audio.play();
+      } catch (err) {
+        console.error("Google TTS failed:", err);
+        // Optional: fallback to browser voice
+        // fallbackToBrowserVoice(text, lang);
       }
-      
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      speechSynthesis.speak(utterance);
     }
 
     /* ================= CORE ================= */
@@ -409,11 +417,6 @@
 
     /* ================= INIT ================= */
     initVoice();
-    
-    // Load voices
-    if ('speechSynthesis' in window) {
-      speechSynthesis.onvoiceschanged = () => {};
-    }
   </script>
 </body>
 </html>
