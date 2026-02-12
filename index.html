@@ -323,6 +323,37 @@
       return 'en-US';
     }
 
+    /* ================= SPEECH SYNTHESIS (BROWSER VOICE - WORKING) ================= */
+    function speakText(text) {
+      if (!('speechSynthesis' in window)) return;
+      
+      // Ensure voices are loaded
+      speechSynthesis.cancel();
+      
+      let lang = 'en-US';
+      if (/[\u0900-\u097F]/.test(text)) lang = 'hi-IN';
+      if (/[\u0C00-\u0C7F]/.test(text)) lang = 'te-IN';
+      if (/[\u0B80-\u0BFF]/.test(text)) lang = 'ta-IN';
+      if (/[\u0C80-\u0CFF]/.test(text)) lang = 'kn-IN';
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+
+      // Get best available voice
+      const voices = speechSynthesis.getVoices();
+      const preferred = voices.find(v => 
+        v.lang === lang && (v.localService || v.name.includes('Google'))
+      );
+      
+      if (preferred) {
+        utterance.voice = preferred;
+      }
+
+      speechSynthesis.speak(utterance);
+    }
+
     /* ================= CORE ================= */
     async function sendMsg() {
       const text = input.value.trim();
@@ -366,36 +397,10 @@
 
         logMsg("AI: " + reply, "ai");
         history.push({ role: "assistant", content: reply });
-
-        // ✅ SPEAK IMMEDIATELY AFTER USER ACTION (inside same async chain)
-        try {
-          // Auto-detect language from reply
-          let lang = 'en';
-          if (/[\u0900-\u097F]/.test(reply)) lang = 'hi';
-          if (/[\u0C00-\u0C7F]/.test(reply)) lang = 'te';
-          if (/[\u0B80-\u0BFF]/.test(reply)) lang = 'ta';
-          if (/[\u0C80-\u0CFF]/.test(reply)) lang = 'kn';
-          if (/[\u0D00-\u0D7F]/.test(reply)) lang = 'ml';
-
-          const ttsRes = await fetch('/api/tts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: reply, lang })
-          });
-
-          if (ttsRes.ok) {
-            const audioBlob = await ttsRes.blob();
-            if (audioBlob.size > 200) {
-              const audioUrl = URL.createObjectURL(audioBlob);
-              const audio = new Audio(audioUrl);
-              audio.onended = () => URL.revokeObjectURL(audioUrl);
-              await audio.play(); // ✅ Allowed because tied to user click
-            }
-          }
-        } catch (voiceErr) {
-          console.error("Voice playback failed:", voiceErr);
-        }
-
+        
+        // ✅ Use BROWSER VOICE (guaranteed to work)
+        speakText(reply);
+        
         setStatus("idle");
       } catch (err) {
         console.error("[FETCH ERROR]", err);
@@ -418,6 +423,11 @@
 
     /* ================= INIT ================= */
     initVoice();
+    
+    // Ensure voices are loaded
+    if ('speechSynthesis' in window) {
+      speechSynthesis.onvoiceschanged = () => {};
+    }
   </script>
 </body>
 </html>
