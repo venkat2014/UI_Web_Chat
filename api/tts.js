@@ -7,8 +7,14 @@ export default async (req) => {
   
   const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${safeLang}&q=${encodeURIComponent(text)}&ttsspeed=1`;
   
-  const res = await fetch(url);
+  // Add User-Agent to avoid block
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0' }
+  });
+  
   if (!res.ok) return new Response('Voice failed', { status: 500 });
   
-  return new Response(res.body, { headers: { 'Content-Type': 'audio/mpeg' } });
+  return new Response(res.body, {
+    headers: { 'Content-Type': 'audio/mpeg' }
+  });
 };
