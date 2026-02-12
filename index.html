@@ -211,223 +211,237 @@
   <!-- BOOTSTRAP JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   
-  <script>
-    /* ================= TEMP CONFIG ================= */
-    const MODEL = "mistralai/mistral-7b-instruct";
-    let history = [{ 
-      role: "system", 
-      content: "Always reply in the same language as the user. If the user writes in Telugu, reply in Telugu. If in Hindi, reply in Hindi. Keep replies short and clear." 
-    }];
+<script>
+  /* ================= TEMP CONFIG ================= */
+  const MODEL = "mistralai/mistral-7b-instruct";
+  let history = [{ 
+    role: "system", 
+    content: "Always reply in the same language as the user. If the user writes in Telugu, reply in Telugu. If in Hindi, reply in Hindi. Keep replies short and clear. Do not use markdown, bold (**), asterisks, or emojis." 
+  }];
 
-    /* ================= DOM ================= */
-    const chat = document.getElementById("chat");
-    const input = document.getElementById("input");
-    const statusEl = document.querySelector(".status");
-    const sendBtn = document.getElementById("sendBtn");
-    const micBtn = document.getElementById("micBtn");
-    const menuToggle = document.getElementById("menuToggle");
-    const sidebar = document.getElementById("sidebar");
-    const installPrompt = document.getElementById("installPrompt");
-    const installBtn = document.getElementById("installBtn");
+  /* ================= DOM ================= */
+  const chat = document.getElementById("chat");
+  const input = document.getElementById("input");
+  const statusEl = document.querySelector(".status");
+  const sendBtn = document.getElementById("sendBtn");
+  const micBtn = document.getElementById("micBtn");
+  const menuToggle = document.getElementById("menuToggle");
+  const sidebar = document.getElementById("sidebar");
+  const installPrompt = document.getElementById("installPrompt");
+  const installBtn = document.getElementById("installBtn");
 
-    /* ================= MOBILE MENU ================= */
-    if (menuToggle) {
-      menuToggle.addEventListener("click", () => {
-        sidebar.classList.toggle("show");
-      });
-    }
-
-    /* ================= PWA INSTALL PROMPT ================= */
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      installPrompt.style.display = 'block';
+  /* ================= MOBILE MENU ================= */
+  if (menuToggle) {
+    menuToggle.addEventListener("click", () => {
+      sidebar.classList.toggle("show");
     });
+  }
 
-    if (installBtn) {
-      installBtn.addEventListener('click', () => {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          deferredPrompt.userChoice.then((choiceResult) => {
-            if (choiceResult.outcome === 'accepted') {
-              console.log('User accepted the install prompt');
-            }
-            installPrompt.style.display = 'none';
-            deferredPrompt = null;
-          });
-        }
+  /* ================= PWA INSTALL PROMPT ================= */
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installPrompt.style.display = 'block';
+  });
+
+  if (installBtn) {
+    installBtn.addEventListener('click', () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('User accepted the install prompt');
+          }
+          installPrompt.style.display = 'none';
+          deferredPrompt = null;
+        });
+      }
+    });
+  }
+
+  /* ================= HELPERS ================= */
+  function logMsg(text, cls) {
+    const div = document.createElement("div");
+    div.className = `msg ${cls}`;
+    div.textContent = text;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function setStatus(t) {
+    if (statusEl) statusEl.textContent = `Status: ${t}`;
+  }
+
+  /* ================= CLEAN TEXT FOR SPEECH ================= */
+  function cleanForSpeech(text) {
+    return text
+      .replace(/[\u{1F600}-\u{1F64F}]/gu, '') // Remove emojis
+      .replace(/\*\*/g, '')                      // Remove **
+      .replace(/[*_~#`]/g, '')                   // Remove markdown
+      .replace(/\s+/g, ' ')                      // Normalize spaces
+      .trim();
+  }
+
+  /* ================= VOICE RECOGNITION ================= */
+  let recognition;
+  function initVoice() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      micBtn.style.display = 'none';
+      return;
+    }
+    
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = detectLanguage();
+    
+    recognition.onstart = () => {
+      micBtn.classList.add('recording');
+      setStatus('Listening...');
+    };
+    
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      input.value = transcript;
+      micBtn.classList.remove('recording');
+      setStatus('idle');
+      sendMsg();
+    };
+    
+    recognition.onerror = (event) => {
+      micBtn.classList.remove('recording');
+      setStatus('Voice error: ' + event.error);
+      console.error('Speech recognition error', event.error);
+    };
+    
+    recognition.onend = () => {
+      micBtn.classList.remove('recording');
+      if (statusEl && statusEl.textContent.includes('Listening')) {
+        setStatus('idle');
+      }
+    };
+  }
+
+  function detectLanguage() {
+    const userLang = navigator.language || navigator.userLanguage;
+    if (userLang.startsWith('te')) return 'te-IN';
+    if (userLang.startsWith('hi')) return 'hi-IN';
+    if (userLang.startsWith('ta')) return 'ta-IN';
+    if (userLang.startsWith('kn')) return 'kn-IN';
+    return 'en-US';
+  }
+
+  /* ================= SPEECH SYNTHESIS (BROWSER VOICE - WORKING) ================= */
+  function speakText(text) {
+    if (!('speechSynthesis' in window)) return;
+    
+    const cleanText = cleanForSpeech(text);
+    if (!cleanText) return;
+
+    speechSynthesis.cancel();
+    
+    let lang = 'en-US';
+    if (/[\u0900-\u097F]/.test(cleanText)) lang = 'hi-IN';
+    if (/[\u0C00-\u0C7F]/.test(cleanText)) lang = 'te-IN';
+    if (/[\u0B80-\u0BFF]/.test(cleanText)) lang = 'ta-IN';
+    if (/[\u0C80-\u0CFF]/.test(cleanText)) lang = 'kn-IN';
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = lang;
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    const voices = speechSynthesis.getVoices();
+    const preferred = voices.find(v => 
+      v.lang === lang && (v.localService || v.name.includes('Google'))
+    );
+    
+    if (preferred) {
+      utterance.voice = preferred;
+    }
+
+    speechSynthesis.speak(utterance);
+  }
+
+  /* ================= CORE ================= */
+  async function sendMsg() {
+    const text = input.value.trim();
+    if (!text) return;
+
+    logMsg("You: " + text, "user");
+    history.push({ role: "user", content: text });
+    input.value = "";
+    setStatus("sending request…");
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: MODEL,
+          messages: history,
+          max_tokens: 300
+        })
       });
-    }
 
-    /* ================= HELPERS ================= */
-    function logMsg(text, cls) {
-      const div = document.createElement("div");
-      div.className = `msg ${cls}`;
-      div.textContent = text;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-    }
+      // ✅ Show "Answering..." while processing
+      setStatus("answering...");
 
-    function setStatus(t) {
-      if (statusEl) statusEl.textContent = `Status: ${t}`;
-    }
-
-    /* ================= VOICE RECOGNITION ================= */
-    let recognition;
-    function initVoice() {
-      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        micBtn.style.display = 'none';
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        logMsg("HTTP ERROR " + res.status + ": " + JSON.stringify(errorData), "error");
+        setStatus("failed");
         return;
       }
-      
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = detectLanguage();
-      
-      recognition.onstart = () => {
-        micBtn.classList.add('recording');
-        setStatus('Listening...');
-      };
-      
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        input.value = transcript;
-        micBtn.classList.remove('recording');
-        setStatus('idle');
-        sendMsg();
-      };
-      
-      recognition.onerror = (event) => {
-        micBtn.classList.remove('recording');
-        setStatus('Voice error: ' + event.error);
-        console.error('Speech recognition error', event.error);
-      };
-      
-      recognition.onend = () => {
-        micBtn.classList.remove('recording');
-        if (statusEl && statusEl.textContent.includes('Listening')) {
-          setStatus('idle');
-        }
-      };
-    }
 
-    function detectLanguage() {
-      const userLang = navigator.language || navigator.userLanguage;
-      if (userLang.startsWith('te')) return 'te-IN';
-      if (userLang.startsWith('hi')) return 'hi-IN';
-      if (userLang.startsWith('ta')) return 'ta-IN';
-      if (userLang.startsWith('kn')) return 'kn-IN';
-      return 'en-US';
-    }
-
-    /* ================= SPEECH SYNTHESIS (BROWSER VOICE - WORKING) ================= */
-    function speakText(text) {
-      if (!('speechSynthesis' in window)) return;
-      
-      // Ensure voices are loaded
-      speechSynthesis.cancel();
-      
-      let lang = 'en-US';
-      if (/[\u0900-\u097F]/.test(text)) lang = 'hi-IN';
-      if (/[\u0C00-\u0C7F]/.test(text)) lang = 'te-IN';
-      if (/[\u0B80-\u0BFF]/.test(text)) lang = 'ta-IN';
-      if (/[\u0C80-\u0CFF]/.test(text)) lang = 'kn-IN';
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang;
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-
-      // Get best available voice
-      const voices = speechSynthesis.getVoices();
-      const preferred = voices.find(v => 
-        v.lang === lang && (v.localService || v.name.includes('Google'))
-      );
-      
-      if (preferred) {
-        utterance.voice = preferred;
-      }
-
-      speechSynthesis.speak(utterance);
-    }
-
-    /* ================= CORE ================= */
-    async function sendMsg() {
-      const text = input.value.trim();
-      if (!text) return;
-
-      logMsg("You: " + text, "user");
-      history.push({ role: "user", content: text });
-      input.value = "";
-      setStatus("sending request…");
-
-      try {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: MODEL,
-            messages: history,
-            max_tokens: 300
-          })
-        });
-
-        setStatus("response received (HTTP " + res.status + ")");
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          logMsg("HTTP ERROR " + res.status + ": " + JSON.stringify(errorData), "error");
-          return;
-        }
-
-        const data = await res.json();
-        if (data.error) {
-          logMsg("API ERROR: " + JSON.stringify(data.error), "error");
-          return;
-        }
-
-        const reply = data?.choices?.[0]?.message?.content;
-        if (!reply) {
-          logMsg("BAD RESPONSE FORMAT", "error");
-          return;
-        }
-
-        logMsg("AI: " + reply, "ai");
-        history.push({ role: "assistant", content: reply });
-        
-        // ✅ Use BROWSER VOICE (guaranteed to work)
-        speakText(reply);
-        
-        setStatus("idle");
-      } catch (err) {
-        console.error("[FETCH ERROR]", err);
-        logMsg("JS / NETWORK ERROR: " + err.message, "error");
+      const data = await res.json();
+      if (data.error) {
+        logMsg("API ERROR: " + JSON.stringify(data.error), "error");
         setStatus("failed");
+        return;
       }
-    }
 
-    /* ================= EVENTS ================= */
-    sendBtn.addEventListener("click", sendMsg);
-    micBtn.addEventListener("click", () => {
-      if (recognition) recognition.start();
-    });
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        sendMsg();
+      const reply = data?.choices?.[0]?.message?.content;
+      if (!reply) {
+        logMsg("BAD RESPONSE FORMAT", "error");
+        setStatus("failed");
+        return;
       }
-    });
 
-    /* ================= INIT ================= */
-    initVoice();
-    
-    // Ensure voices are loaded
-    if ('speechSynthesis' in window) {
-      speechSynthesis.onvoiceschanged = () => {};
+      logMsg("AI: " + reply, "ai");
+      history.push({ role: "assistant", content: reply });
+      
+      // ✅ Speak CLEAN text
+      speakText(reply);
+      
+      setStatus("idle");
+    } catch (err) {
+      console.error("[FETCH ERROR]", err);
+      logMsg("JS / NETWORK ERROR: " + err.message, "error");
+      setStatus("failed");
     }
-  </script>
+  }
+
+  /* ================= EVENTS ================= */
+  sendBtn.addEventListener("click", sendMsg);
+  micBtn.addEventListener("click", () => {
+    if (recognition) recognition.start();
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      sendMsg();
+    }
+  });
+
+  /* ================= INIT ================= */
+  initVoice();
+  
+  if ('speechSynthesis' in window) {
+    speechSynthesis.onvoiceschanged = () => {};
+  }
+</script>
 </body>
 </html>
