@@ -214,7 +214,10 @@
   <script>
     /* ================= TEMP CONFIG ================= */
     const MODEL = "mistralai/mistral-7b-instruct";
-    let history = [{ role: "system", content: "You are a helpful AI assistant." }];
+   let history = [{ 
+  role: "system", 
+  content: "Always reply in the same language as the user. If the user writes in Telugu, reply in Telugu. If in Hindi, reply in Hindi. Keep replies short and clear." 
+}];
 
     /* ================= DOM ================= */
     const chat = document.getElementById("chat");
