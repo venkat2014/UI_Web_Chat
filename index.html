@@ -213,7 +213,11 @@
   
 <script>
   /* ================= TEMP CONFIG ================= */
-  const MODEL = "mistralai/mistral-7b-instruct";
+const MODELS = [
+  "meta-llama/llama-3.1-8b-instruct",
+  "openchat/openchat-3.5",
+  "nousresearch/hermes-2-pro-llama-3-8b"
+];
   let history = [{ 
     role: "system", 
     content: "Always reply in the same language as the user. If the user writes in Telugu, reply in Telugu. If in Hindi, reply in Hindi. Keep replies short and clear. Do not use markdown, bold (**), asterisks, or emojis." 
@@ -379,11 +383,12 @@
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: history,
-          max_tokens: 300
-        })
+       body: JSON.stringify({
+  route: "fallback",
+  models: MODELS,
+  messages: history,
+  max_tokens: 300
+})
       });
 
       // ✅ Show "Answering..." while processing
