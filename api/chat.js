@@ -43,7 +43,7 @@ export default async function handler(req, res) {
       messages: [
         {
           role: "system",
-          content: "Answer like a teacher for 6th class student using only provided context. Keep answer simple."
+          content: "Reply in the same language as the user (Telugu, Hindi, or English). Answer like a teacher for a 6th class student using only the provided context. Keep the answer short, clear, and natural like spoken language."
         },
         {
           role: "user",
