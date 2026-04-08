@@ -199,7 +199,8 @@
     <div class="input-group">
       <input type="text" class="form-control" id="input" placeholder="Type or tap mic to speak...">
       <button class="btn btn-mic" id="micBtn">🎤</button>
-      <button class="btn btn-primary" id="sendBtn">Send</button>
+            <button class="btn btn-primary" id="sendBtn">Send</button>
+      <button class="btn btn-warning" id="stopBtn">⏹ Stop</button>
     </div>
   </div>
 
@@ -430,6 +431,14 @@ const MODELS = [
 
   /* ================= EVENTS ================= */
   sendBtn.addEventListener("click", sendMsg);
+  const stopBtn = document.getElementById("stopBtn");
+
+stopBtn.addEventListener("click", () => {
+  if ('speechSynthesis' in window) {
+    speechSynthesis.cancel();
+    setStatus("stopped");
+  }
+});
   micBtn.addEventListener("click", () => {
     if (recognition) recognition.start();
   });
