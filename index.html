@@ -338,37 +338,35 @@ content: "Reply in the same language as the user (Telugu, Hindi, or English). An
   }
 
   /* ================= SPEECH SYNTHESIS (BROWSER VOICE - WORKING) ================= */
-  function speakText(text) {
-    if (!('speechSynthesis' in window)) return;
-    
-    const cleanText = cleanForSpeech(text);
-    if (!cleanText) return;
+ function speakText(text) {
+  if (!('speechSynthesis' in window)) return;
 
+  const cleanText = cleanForSpeech(text);
+  if (!cleanText) return;
+
+  if (speechSynthesis.speaking) {
     speechSynthesis.cancel();
-    
-    let lang = 'en-US';
-    if (/[\u0900-\u097F]/.test(cleanText)) lang = 'hi-IN';
-    if (/[\u0C00-\u0C7F]/.test(cleanText)) lang = 'te-IN';
-    if (/[\u0B80-\u0BFF]/.test(cleanText)) lang = 'ta-IN';
-    if (/[\u0C80-\u0CFF]/.test(cleanText)) lang = 'kn-IN';
-
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = lang;
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-
-    const voices = speechSynthesis.getVoices();
-    const preferred = voices.find(v => 
-      v.lang === lang && (v.localService || v.name.includes('Google'))
-    );
-    
-    if (preferred) {
-      utterance.voice = preferred;
-    }
-
-    speechSynthesis.speak(utterance);
   }
 
+  let lang = 'en-US';
+  if (/[\u0900-\u097F]/.test(cleanText)) lang = 'hi-IN';
+  if (/[\u0C00-\u0C7F]/.test(cleanText)) lang = 'te-IN';
+
+  const sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
+
+  function speakNext(i) {
+    if (i >= sentences.length) return;
+
+    const utter = new SpeechSynthesisUtterance(sentences[i]);
+    utter.lang = lang;
+
+    utter.onend = () => speakNext(i + 1);
+
+    speechSynthesis.speak(utter);
+  }
+
+  speakNext(0);
+}
   /* ================= CORE ================= */
   async function sendMsg() {
     const text = input.value.trim();
