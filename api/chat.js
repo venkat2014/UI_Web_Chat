@@ -10,20 +10,27 @@ function simpleSearch(query) {
 
   return data
     .map(chunk => {
+      const text = chunk.content.toLowerCase();
       let score = 0;
 
-      chunk.keywords.forEach(k => {
-        if (q.includes(k)) score += 2;
+      // Strong full match
+      if (text.includes(q)) score += 20;
+
+      // Word match
+      q.split(" ").forEach(word => {
+        if (text.includes(word)) score += 2;
       });
 
-      if (chunk.content.toLowerCase().includes(q)) score += 5;
+      // Keyword boost
+      chunk.keywords.forEach(k => {
+        if (q.includes(k)) score += 3;
+      });
 
       return { ...chunk, score };
     })
     .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+    .slice(0, 8);
 }
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
