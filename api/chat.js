@@ -29,7 +29,7 @@ function simpleSearch(query) {
       return { ...chunk, score };
     })
     .sort((a, b) => b.score - a.score)
-    .slice(0, 8);
+    .slice(0, 5);
 }
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
