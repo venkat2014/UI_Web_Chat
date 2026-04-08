@@ -1,6 +1,9 @@
 import fs from "fs";
+import path from "path";
 
-const data = JSON.parse(fs.readFileSync("./6_English.json", "utf-8"));
+// ✅ Safe path for Vercel
+const filePath = path.join(process.cwd(), "api", "6_English.json");
+const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 
 function simpleSearch(query) {
   const q = query.toLowerCase();
