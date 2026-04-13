@@ -61,8 +61,8 @@ ${userMsg}
 `;
 
     // 🤖 Gemini API call
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.v2014gemini_key}`,
+   const response = await fetch(
+  `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${process.env.v2014gemini_key}`,
       {
         method: "POST",
         headers: {
