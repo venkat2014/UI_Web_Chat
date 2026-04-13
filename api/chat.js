@@ -62,7 +62,9 @@ ${userMsg}
 
     // 🤖 Gemini API call
      const response = await fetch(
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent?key=${process.env.v2014gemini_key}`,
+
+// ✅ New URL (stable v1 endpoint)
+`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${process.env.v2014gemini_key}`,
       {
         method: "POST",
         headers: {
