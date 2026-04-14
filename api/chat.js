@@ -60,25 +60,25 @@ Question:
 ${userMsg}
 `;
 
-    // 🤖 Gemini API call
-     const response = await fetch(
-
-// ✅ New URL (stable v1 endpoint)
-`https://generativelanguage.googleapis.com/v1/models/gemma-3-4b:generateContent?key=${process.env.techgeminiapikey}`,      
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }]
-            }
-          ]
-        })
-      }
-    );
+    // 🟦 Groq API call (replaces Gemini)
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.v2014groqkey}`
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: 512,
+        temperature: 0.7
+      })
+    });
 
     if (!response.ok) {
       const error = await response.json();
@@ -88,10 +88,10 @@ ${userMsg}
     const dataRes = await response.json();
 
     const reply =
-      dataRes?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "No response from Gemini";
+      dataRes?.choices?.[0]?.message?.content ||
+      "No response from Groq";
 
-    // ✅ Convert to OpenRouter format (so frontend stays same)
+    // ✅ Return in same format (frontend stays same)
     res.status(200).json({
       choices: [
         {
@@ -104,7 +104,7 @@ ${userMsg}
 
   } catch (error) {
     res.status(500).json({
-      error: error.message || "Gemini request failed"
+      error: error.message || "Groq request failed"
     });
   }
 }
