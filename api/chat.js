@@ -64,7 +64,7 @@ ${userMsg}
      const response = await fetch(
 
 // ✅ New URL (stable v1 endpoint)
-`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-lite:generateContent?key=${process.env.techgeminiapikey1}`,
+`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-lite:generateContent?key=${process.env.techgeminiapikey2}`,
       
       {
         method: "POST",
